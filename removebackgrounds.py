@@ -57,7 +57,7 @@ def segment_and_replace_video(filepath, out_dir):
 
 
 for folder in folders:
-    names = glob(f'{dataset_path}{folder}/*[!_nobg].mp4')
+    names = glob(f'{dataset_path}{folder}/*[!_nobg]_color.mp4')
     for name in names:
         segment_and_replace_video(name, f'{dataset_path}nobg/{folder}')
         print(name)
