@@ -53,11 +53,14 @@ def segment_and_replace_video(filepath, out_dir):
     
     cap.release()    
     if out:
-        out.release()    
+        out.release()  
+
+    if os.path.isfile(filepath):
+        os.remove(filepath) 
 
 
 for folder in folders:
-    names = glob(f'{dataset_path}{folder}/*[!_nobg]_color.mp4')
+    names = glob(f'{dataset_path}{folder}/*[!_nobg!_depth].mp4')
     for name in names:
         segment_and_replace_video(name, f'{dataset_path}nobg/{folder}')
         print(name)
