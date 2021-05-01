@@ -14,10 +14,15 @@ device = torch.device('cpu')
 deeplabmodel = torch.hub.load('pytorch/vision:v0.6.0', 'deeplabv3_resnet101', pretrained=True).to(device).eval()
 
 dataset_path = './dataset/'
-folders = ['train', 'val']
-
 
 def segment_and_replace_video(filepath, out_dir):
+    """
+    1. reads the video
+    2. reduces video size to 256x256 and fps to 15
+    3. removes background
+    4. writes to outdir
+    5. deletes original video
+    """
     filename = os.path.basename(filepath)
     cap = cv2.VideoCapture(filepath)   # capturing the video from the given path    
     video_arr = []
@@ -36,29 +41,31 @@ def segment_and_replace_video(filepath, out_dir):
 
         if (ret != True):
             break
+
+        #half fps by frame_interval
         if (frameId % frame_interval == 0):
             # Converting to tensor
             frame =  torchvision.transforms.functional.to_tensor(frame).float().to(device)
             frame = frame.unsqueeze(0)
+            #reduces img size to 256x256
             frame =  F.interpolate(frame, (256,256), mode='bilinear')
             frame = frame.squeeze(0)
             frame_nobg = segment_img_rm_bg(frame, deeplabmodel, device)
-            # print(frame_nobg.shape)
-            # plt.imshow(frame_nobg)
-            # plt.show()
-            # break
-            # video_arr.append(frame_nobg)
-            # print(frame.shape)
+            #write to output
             out.write((frame_nobg*255).astype(np.uint8))
     
+    #release memory
     cap.release()    
     if out:
         out.release()  
-
+    
+    #delete original video
     if os.path.isfile(filepath):
         os.remove(filepath) 
 
 
+folders = ['train', 'val']
+#look through dataset/train and dataset/val, output to dataset/nobg/train and dataset/nobg/val the videos with backgrounds removed
 for folder in folders:
     names = glob(f'{dataset_path}{folder}/*[!_nobg!_depth].mp4')
     for name in names:

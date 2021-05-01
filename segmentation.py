@@ -38,9 +38,10 @@ def segment_rm_bg(video, segmentation_model, device):
 
 
 def segment_img_rm_bg(frame, segmentation_model, device):
-    """
-    input video is a tensor
-    output video is a tensor
+    """    
+    removes background using segmentation_model
+    input img is a tensor
+    output img is a tensor
     """
     imagenet_stats = [[0.485, 0.456, 0.406], [0.229, 0.224, 0.225]]
 
@@ -59,8 +60,8 @@ def segment_img_rm_bg(frame, segmentation_model, device):
     
     npframe = frame.permute(1,2,0).cpu().numpy()
     mask = segmentimg(npframe).cpu().numpy()
-    # print(np.unique(mask))
-    maskbool = (mask!=15)
-    maskbool = np.repeat(maskbool[:, :, np.newaxis], 3, axis=2) # (512,512) mask to (512,512,3)
-    npframe[maskbool] = 0
+    #15 corresponds to human being label. we only want pixels that correspond to the individual
+    maskbool = (mask!=15) 
+    maskbool = np.repeat(maskbool[:, :, np.newaxis], 3, axis=2) # (512,512) mask to (512,512,3), we make the mask 3 channels to match rgb
+    npframe[maskbool] = 0 #we set all values that are not human to 0
     return npframe
