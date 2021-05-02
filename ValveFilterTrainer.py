@@ -15,11 +15,50 @@ import pandas as pd
 import warnings 
 warnings.filterwarnings("ignore")
 
+
+### ARGPARSE SECTION
+def checkPosInteger(value, valueType):
+	try:
+		ivalue = int(value)
+		if ivalue <= 0:
+			raise argparse.ArgumentTypeError("{} : {} is not a valid input!".format(valueType, value))
+		return ivalue
+	except:
+		raise argparse.ArgumentTypeError("{} : {} is not a valid input!".format(valueType, value))
+		
+def dir_path(string):
+	if os.path.isdir(string):
+		return string
+	else:
+		os.mkdir(string)
+		print ("{} directory made!".format(string))
+
+parser = argparse.ArgumentParser(description='Valve Filter Model Trainer')
+parser.add_argument('--n_epochs', type=lambda x: checkPosInteger(x, "n_epochs"), default=5, help="Number of epochs")
+parser.add_argument('--lr', type=float, default=1e-5, help="Learning Rate")
+parser.add_argument('--model_path', type=dir_path, default="./model", help="Input Model path for saving purposes")
+parser.add_argument('--d', type=bool, default=True, help="Use Cuda or not")
+
+
+args = parser.parse_args()
+
+# Define Parameter here:
+n_epochs = args.n_epochs
+lr = args.lr
+model_path = args.model_path
+device = "cuda" if args.d else "cpu"
+model_type = "baseline"
+steps = 0 
+print_every = 50
+validate_every = 50
+
+
+### END OF ARGPARSE
+
 class AUTSLDatasetROI(Dataset):
     '''
     Dataset for the AUTSL data
     '''
-    
     
     def __init__(self, data_type, max_frame_no ,frame_interval = 1, file_percentage = 1.0, data_path ="./dataset/" ):
         self.data_type = data_type
@@ -113,61 +152,13 @@ valROI_autsl = AUTSLDatasetROI("val", int(114/2), frame_interval=4, file_percent
 trainroiloader = DataLoader(trainROI_autsl, batch_size=batch_size, shuffle=True)
 valroiloader = DataLoader(valROI_autsl, batch_size=batch_size, shuffle=True)
 
-## Pre-processing
-TRAIN_PATH = "../train/"
-VAL_PATH = "../val/"
-files_train = os.listdir(TRAIN_PATH)
-filtered_train = [file for file in files_train if "depth" in file]
-files_val = os.listdir(VAL_PATH)
-filtered_val = [file for file in files_val if "depth" in file]
-
-def generate_roi(filter_path, filtered):
-    for filename in tqdm(filtered):
-        name = filter_path + filename 
-    #     name = target1
-        cap = cv2.VideoCapture(name)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 960)
-
-        filename = name.replace("depth","roi")
-        fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-#         print(filename)
-        out = cv2.VideoWriter(filename, fourcc, 30, (512, 512))
-
-        while True:
-            _, frame = cap.read()
-            if frame is None:
-                break
-            output = frame.copy()
-            retval,thresh = cv2.threshold(frame, 20, 255, cv2.THRESH_BINARY)
-            kernel = np.ones((5,5),np.uint8)
-            dilation = cv2.dilate(thresh,kernel,iterations = 1)
-            out.write(dilation)
-
-            if cv2.waitKey(25) & 0xFF == ord('q'):
-                cv2.destroyAllWindows()
-                break
-
-        out.release()
-		
-generate_roi(TRAIN_PATH, filtered_train)
-generate_roi(VAL_PATH, filtered_val)
-
 
 # Define model instance 
 model = BaselineModel()
 # x = torch.rand((5, 4, 3, 256, 256))
 summary(model)
 
-# Define Parameter here:
-model_type = "baseline"
-model_path = "./model/"
-n_epochs = 5
-lr = 1e-5
-steps = 0 
-print_every = 50
-validate_every = 50
-device = "cuda"
+
 
 train_loss_ls = []
 val_loss_ls = []
@@ -353,10 +344,3 @@ def train(model, model_name, batch_size, n_epochs, lr, trainroi_loader, valroi_l
     return model.state_dict(), best_accuracy_weights
 
 last_weights, best_weights = train(model, "baseline", batch_size, n_epochs, lr, trainroiloader,valroiloader, saved_model_path=current_model_path)
-
-model.eval()
-
-# Turn off gradients for validation
-with torch.no_grad():
-    test_loss, accuracy = validation(model, valloader, criterion, device)
-#                         recall = metrics.recall(confusion_matrix, num_classes
