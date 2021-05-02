@@ -112,3 +112,83 @@ class AUTSLDataset(Dataset):
                 max_length = video.shape[0]
         return max_length
     
+class AUTSLDatasetROI(Dataset):
+    '''
+    Dataset for the AUTSL data
+    '''
+    
+    def __init__(self, data_type, max_frame_no ,frame_interval = 1, file_percentage = 1.0, data_path ="./dataset/" ):
+        self.data_type = data_type
+        self.frame_interval = frame_interval
+        self.data_path = {"train": data_path + "train/",
+                          "val": data_path + "val/"
+                         }        
+        self.data_length = {"train":  int(len(glob(f"{self.data_path['train']}*_color.mp4"))*file_percentage),
+                            "val": int(len(glob(f"{self.data_path['val']}*_color.mp4"))*file_percentage)
+                           }
+        self.label_path = {"train": data_path + "train_labels.csv",
+                           "val": data_path + "val_labels.csv"
+                          }
+        self.labels = pd.read_csv(self.label_path[self.data_type],names = ["file_name", "label"])
+        self.file_ls = glob(f"{self.data_path[self.data_type]}*_color.mp4")[:self.data_length[self.data_type]]
+        self.max_frame_no = max_frame_no
+        self.device = "cuda"
+
+        
+    def Describe(self):
+        msg = "AUTSL Dataset\n"
+        print(msg)
+    
+        
+    def GetLabel(self, file_name):
+        return self.labels[self.labels.file_name ==file_name]["label"].values[0]
+    
+    def GetVideoArray(self, file_name):
+
+        cap = cv2.VideoCapture(self.data_path[self.data_type] + file_name)   # capturing the video from the given path
+        video_arr = []
+        while(cap.isOpened()):
+            frameId = cap.get(1) #current frame number
+            ret, frame = cap.read()
+            if (ret != True):
+                break
+            if (frameId % self.frame_interval == 0):
+                # Converting to tensor
+                frame =  torchvision.transforms.functional.to_tensor(frame).float().to(self.device)
+                frame = frame.unsqueeze(0)
+                frame =  F.interpolate(frame, (256,256), mode='bilinear')
+                frame = frame.squeeze(0)
+                video_arr.append(frame)
+        cap.release()
+
+    
+        if len(video_arr)<self.max_frame_no:
+            empty_frame = torch.zeros((3,256,256)).to(self.device)
+            padding  = [empty_frame]*(self.max_frame_no-len(video_arr))
+            video_arr+=padding
+
+        return torch.stack(video_arr) 
+        
+    def __len__(self):
+        return self.data_length[self.data_type]
+    
+    def __getitem__(self, index):
+        '''
+        Return 4D array consists of all the frame of the video image AND the label
+        '''
+        file_name = os.path.basename(self.file_ls[index])
+        d_file_name = file_name.replace("color","roi")
+        
+        video_arr = self.GetVideoArray(file_name)
+        label = self.GetLabel(file_name[:-10]) #slice to get just the name without file ext and file type
+        videoroi_arr = self.GetVideoArray(file_name.replace("color","roi"))
+        file_name.replace("roi","color")
+        return video_arr, videoroi_arr, label
+        
+    def get_max(self):
+        max_length = 0
+        for i in tqdm(range(len(self))):
+            video, label = self[i]
+            if video.shape[0]>max_length:
+                max_length = video.shape[0]
+        return max_length

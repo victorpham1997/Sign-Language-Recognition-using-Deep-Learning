@@ -17,7 +17,7 @@ from torchsummary import summary
 import os
 import pandas as pd
 import math
-from AUTSLDataset import AUTSLDataset 
+from utils.AUTSLDataset import AUTSLDataset 
 
 t  = AUTSLDataset("train")
 max_frame = t.get_max()

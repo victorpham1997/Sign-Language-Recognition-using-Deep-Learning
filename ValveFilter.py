@@ -88,26 +88,6 @@ def GetVideoArray(videoFilePath):
 
 	return video_arr, torch.unsqueeze(torch.stack(video_arr), 0) 
 
-def validation(model, data, criterion, device):
-	model.eval()
-	test_loss = 0
-	accuracy = 0
-	images, rois, label = data
-	images, rois, label = images.to(device), rois.to(device), label.to(device)
-	print ("Label: {}".format(label))
-
-
-	output = model(images, rois)
-	test_loss += criterion(output, label).item()
-
-	ps = torch.exp(output)
-	predictions = ps.max(dim=1)[1]
-	equality = (label.data == predictions)
-	accuracy += equality.type(torch.FloatTensor).mean()
-	#         for label, prediction in zip(labels.view(-1), predictions.view(-1)):
-	#             confusion_matrix[label.long(), prediction.long()] += 1
-	print ("Prediction: {}".format(predictions))
-	return predictions, test_loss, accuracy
 	
 # load in video & roi data
 videoArrayRaw, videoArray = GetVideoArray(videoPath)
@@ -121,5 +101,5 @@ label = GetLabel(labelsPath, videoPath)
 model = torch.load(modelPath)
 print (model)
 criterion = nn.NLLLoss()
-predictions, test_loss, accuracy = validation(model, [videoArray, videoROIArray, label], criterion, "cuda")
+predictions, test_loss, accuracy = validation_vf(model, [videoArray, videoROIArray, label], criterion, "cuda")
 displayPredVideo(videoPath, predictions)

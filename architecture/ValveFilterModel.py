@@ -29,18 +29,11 @@ class cnn_vf(nn.Module):
         '''
         Input shape = (batchsize, seq, 3, h, w)
         '''
-#         print("Input rgb: ",rgb.shape)
-#         print("Input roi: ",roi.shape)
         red,green,blue = rgb[:,0:1,:,:],rgb[:,1:2,:,:],rgb[:,2:,:,:]
-#         print(red.shape,blue.shape,green.shape)
         bgr = torch.cat((blue - VGG_MEAN[0],green - VGG_MEAN[1], red - VGG_MEAN[2]),1)
-#         print("BGR: ",bgr.shape)
         features_map = self.conv1_0(bgr)
-#         print("features map: ",features_map.shape)
         relevance_map = self.conv1_1(roi)
-#         print("relevance_map: ",relevance_map.shape)
-        norm_features_map = features_map * relevance_map        
-#         print("norm_features_map: ",norm_features_map.shape)
+        norm_features_map = features_map * relevance_map     
         output = self.vggmiddle(norm_features_map)
         return output
     
@@ -151,8 +144,6 @@ class ValveFilterModel(nn.Module):
         
     def forward(self,x,roi):
         embedding_output = []
-#         print("x: ",x.shape)
-#         print("roi: ",roi.shape)
         for i in range(x.size(1)):
             x_i = self.cnn(x[:,i,:,:,:],roi[:,i,:,:,:])
             x_i = self.fpm(x_i)
