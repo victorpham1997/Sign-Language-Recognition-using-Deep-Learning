@@ -7,6 +7,7 @@ from torch.nn import functional as F
 import argparse
 import os
 from ModelClasses import *
+from utils.
 import cv2
 import pandas as pd
 
@@ -96,10 +97,8 @@ videoROIArrayRaw, videoROIArray = GetVideoArray(videoPath.replace("color", "roi"
 # load in the gt labels
 label = GetLabel(labelsPath, videoPath)
 
-# model = BaselineModel()
-# print (model)
 model = torch.load(modelPath)
 print (model)
 criterion = nn.NLLLoss()
-predictions, test_loss, accuracy = validation_vf(model, [videoArray, videoROIArray, label], criterion, "cuda")
+predictions, test_loss, accuracy = validation_vf_single(model, [videoArray, videoROIArray, label], criterion, "cuda")
 displayPredVideo(videoPath, predictions)

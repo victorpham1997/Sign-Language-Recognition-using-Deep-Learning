@@ -25,15 +25,29 @@ def validation(model, testloader, criterion, device):
 
     return test_loss, accuracy
 
+def validation_vf(model, testloader, criterion, device):
+    test_loss = 0
+    accuracy = 0
+    with tqdm(testloader, position=0, leave=False) as progress_bar:          
+        for images, rois, labels in progress_bar:
+            images, rois, labels = images.to(device), rois.to(device), labels.to(device)
 
-def validation_vf(model, data, criterion, device):
+            output = model(images, rois)
+            test_loss += criterion(output, labels).item()
+
+            ps = torch.exp(output)
+            predictions = ps.max(dim=1)[1]
+            equality = (labels.data == predictions)
+            accuracy += equality.type(torch.FloatTensor).mean()
+    return test_loss, accuracy
+
+def validation_vf_single(model, data, criterion, device):
     model.eval()
     test_loss = 0
     accuracy = 0
     images, rois, label = data
     images, rois, label = images.to(device), rois.to(device), label.to(device)
     print ("Label: {}".format(label))
-
 
     output = model(images, rois)
     test_loss += criterion(output, label).item()
@@ -48,7 +62,6 @@ def validation_vf(model, data, criterion, device):
 def test(model, testloader, device='cuda'):  
     model.to(device)
     accuracy = 0
-
     with torch.no_grad():
         model.eval()
         for images, labels in testloader:
@@ -67,16 +80,16 @@ def test(model, testloader, device='cuda'):
         print('Testing accuracy: {:.3f}'.format(accuracy/len(testloader)))
     return accuracy
 
-def test(model, testloader, device='cuda'):  
+def test_vf(model, testloader, device='cuda'):  
     model.to(device)
     accuracy = 0
-
     with torch.no_grad():
         model.eval()
-        for images, labels in testloader:
+        for images, rois, labels in testloader:
             images, labels = images.to(device), labels.to(device)
-                    
-            output = model(images)
+            images, rois, labels = images.to(device), rois.to(device), labels.to(device)
+            
+            output = model(images, rois)
             
             ps = torch.exp(output)
             predictions = ps.max(dim=1)[1]
@@ -85,13 +98,9 @@ def test(model, testloader, device='cuda'):
 
             for t, p in zip(labels.view(-1), predictions.view(-1)):
                 confusion_matrix[t.long(), p.long()] += 1
+        
         print('Testing accuracy: {:.3f}'.format(accuracy/len(testloader)))
-        print(f'Testing recall: {recall:.3f}')
-        print(f'Testing precision: {precision:.3f}')
-        print(f'Testing f1: {f1:.3f}')
-
-    return accuracy, confusion_matrix
-
+    return accuracy
 
 def train(model, model_name, batch_size, n_epochs, lr, train_loader, val_loader, saved_model_path, device = "cuda"):
     start_time = datetime.now()
