@@ -1,5 +1,5 @@
 import torch
-from segmentation import segment_img_rm_bg
+from utils.segmentation import segment_img_rm_bg
 from torch.nn import functional as F
 import cv2
 import torchvision
@@ -16,13 +16,23 @@ deeplabmodel = torch.hub.load('pytorch/vision:v0.6.0', 'deeplabv3_resnet101', pr
 dataset_path = './dataset/'
 
 def segment_and_replace_video(filepath, out_dir):
-    """
+    '''
+    Preprocess to remove video background
     1. reads the video
     2. reduces video size to 256x256 and fps to 15
     3. removes background
     4. writes to outdir
     5. deletes original video
-    """
+
+    Parameters
+    ----------
+    filepath : str : path to file
+    out_dir : str : path to the output
+
+    Returns
+    -------
+    None
+    '''
     filename = os.path.basename(filepath)
     cap = cv2.VideoCapture(filepath)   # capturing the video from the given path    
     video_arr = []

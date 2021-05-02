@@ -134,9 +134,9 @@ class attention(nn.Module):
     
 
     
-class BaselineModel(nn.Module):
+class ValveFilterModel(nn.Module):
     def __init__(self):
-        super(BaselineModel, self).__init__()
+        super(ValveFilterModel, self).__init__()
         self.bidirectional = True
         self.lstm_hiddensize = 512
         self.dropout_p = 0.25
