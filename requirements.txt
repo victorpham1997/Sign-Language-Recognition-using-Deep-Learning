@@ -1,2 +1,12 @@
 einops
 torch-summary
+ffmpeg-python
+flask_cors
+flask
+numpy
+pandas
+cv2
+matplotlib
+torch
+torchvision
+tqdm

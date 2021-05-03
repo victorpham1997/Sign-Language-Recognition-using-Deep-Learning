@@ -45,6 +45,7 @@ The notebooks includes:
 - Sign-Language-Recognition-Notebook-baseline
 - Sign-Language-Recognition-Notebook-baseline-semantic-seg
 - Sign-Language-Recognition-Notebook-Valve-Filter
+- Sign-Language-Recognition-Notebook-Transformer
 
 ## Inference
 
@@ -66,4 +67,13 @@ To test inference of the **valve filter** model run
 python3 main.py --model_name valveFilter --model_weight ./models/valveFilter.pt --video ./samples/signer0_sample29_color.mp4 --label ./dataset/train_labels.csv 
 ```
 
-# 
+For the transformer model, we did not include the model as its size was too large for git. 
+
+## GUI
+
+To run the GUI module:
+
+1. Install required python libraries
+2. Install npm libraries "cd webapp && npm i"
+3. Start webapp with "cd webapp && npm run start"
+4. Start flask server with "cd server && python3 main.py"

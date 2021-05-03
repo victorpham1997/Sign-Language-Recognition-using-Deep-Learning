@@ -10,7 +10,6 @@ import os
 device = torch.device('cpu')
 # device = torch.device('cuda')
 
-
 deeplabmodel = torch.hub.load('pytorch/vision:v0.6.0', 'deeplabv3_resnet101', pretrained=True).to(device).eval()
 
 dataset_path = './dataset/'
