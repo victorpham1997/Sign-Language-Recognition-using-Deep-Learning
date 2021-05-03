@@ -67,7 +67,11 @@ To test inference of the **valve filter** model run
 python3 main.py --model_name valveFilter --model_weight ./models/valveFilter.pt --video ./samples/signer0_sample29_color.mp4 --label ./dataset/train_labels.csv 
 ```
 
-For the transformer model, we did not include the model as its size was too large for git. 
+To test inference of the **transformer** model, the model needs to be download from https://drive.google.com/file/d/1zqmRBBGB3C_3U9PbS5mceO5Ok1xIR5Q8/view?usp=sharing and put it under /models/. Then run
+
+```bash
+python3 main.py --model_name transfromer --model_weight ./models/transfromer.pt --video ./samples/signer0_sample29_color.mp4 --label ./dataset/train_labels.csv 
+```
 
 ## GUI
 
