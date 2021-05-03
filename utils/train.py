@@ -1,4 +1,3 @@
-from torchsummary import summary
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -58,7 +57,6 @@ def inference (model_name, model, data, device):
     ps = torch.exp(output)
     predictions = ps.max(dim=1)[1]
     equality = (label.data == predictions)
-    accuracy += equality.type(torch.FloatTensor).mean()
     print ("Prediction: {}".format(predictions))
     return predictions
 
