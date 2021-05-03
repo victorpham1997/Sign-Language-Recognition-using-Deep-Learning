@@ -124,12 +124,10 @@ class attention(nn.Module):
         c = torch.sum(x*hidden, dim=1)
         return c
     
-    
 
-    
-class ValveFilterModel(nn.Module):
+class BaselineModel(nn.Module):
     def __init__(self):
-        super(ValveFilterModel, self).__init__()
+        super(BaselineModel, self).__init__()
         self.bidirectional = True
         self.lstm_hiddensize = 512
         self.dropout_p = 0.25

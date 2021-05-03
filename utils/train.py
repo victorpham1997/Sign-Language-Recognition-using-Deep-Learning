@@ -41,23 +41,26 @@ def validation_vf(model, testloader, criterion, device):
             accuracy += equality.type(torch.FloatTensor).mean()
     return test_loss, accuracy
 
-def validation_vf_single(model, data, criterion, device):
+def inference (model_name, model, data, device):
     model.eval()
-    test_loss = 0
-    accuracy = 0
-    images, rois, label = data
-    images, rois, label = images.to(device), rois.to(device), label.to(device)
-    print ("Label: {}".format(label))
 
-    output = model(images, rois)
-    test_loss += criterion(output, label).item()
+    if model_name == "valveFilter":
+        images, rois, label = data
+        images, rois, label = images.to(device), rois.to(device), label.to(device)
+        output = model(images, rois)
+    else:
+        images, label = data
+        images, label = images.to(device), label.to(device)
+        output = model(images)
+
+    print ("Label: {}".format(label))
 
     ps = torch.exp(output)
     predictions = ps.max(dim=1)[1]
     equality = (label.data == predictions)
     accuracy += equality.type(torch.FloatTensor).mean()
     print ("Prediction: {}".format(predictions))
-    return predictions, test_loss, accuracy
+    return predictions
 
 def test(model, testloader, device='cuda'):  
     model.to(device)
@@ -86,7 +89,6 @@ def test_vf(model, testloader, device='cuda'):
     with torch.no_grad():
         model.eval()
         for images, rois, labels in testloader:
-            images, labels = images.to(device), labels.to(device)
             images, rois, labels = images.to(device), rois.to(device), labels.to(device)
             
             output = model(images, rois)
@@ -95,9 +97,6 @@ def test_vf(model, testloader, device='cuda'):
             predictions = ps.max(dim=1)[1]
             equality = (labels.data == predictions)
             accuracy += equality.type(torch.FloatTensor).mean()
-
-            for t, p in zip(labels.view(-1), predictions.view(-1)):
-                confusion_matrix[t.long(), p.long()] += 1
         
         print('Testing accuracy: {:.3f}'.format(accuracy/len(testloader)))
     return accuracy
@@ -264,7 +263,7 @@ def train_vf(model, model_name, batch_size, n_epochs, lr, trainroi_loader, valro
                 # Make sure training is back on
                 model.train()
             elif  steps % print_every == 0:
-                print("Epoch: {}/{} - ".format(e+1, n_epochs), "Training Loss: {:.3f} - ".format(running_loss2/print_every))
+                print("Epoch: {}/{} - ".format(e+1, n_epochs), f"- Step: {idx}/{len(train_loader)}" , "Training Loss: {:.3f} - ".format(running_loss2/print_every))
                 running_loss2 = 0
                     
         filepath = saved_model_path + f"{model_name}-{start_time}-b{batch_size}-e{e}.pt"
@@ -272,9 +271,17 @@ def train_vf(model, model_name, batch_size, n_epochs, lr, trainroi_loader, valro
 
     print("Finished training")
     
-    plt.plot(train_loss_ls, label = "train_loss")
-    plt.plot(val_loss_ls, label = "val_loss")
-    plt.legend()
-    plt.savefig(saved_model_path+'train_val_loss.png')
-    plt.show()
-    return model.state_dict(), best_accuracy_weights
+    fig, axs = plt.subplots(2,figsize=(10,15))
+    
+    axs[0].plot(train_loss_ls, label = "train_loss")
+    axs[0].plot(val_loss_ls, label = "val_loss")
+    axs[0].legend()
+    
+    axs[1].plot(train_acc_ls,label = "train_acc")
+    axs[1].plot(val_acc_ls,label = "val_acc")
+    axs[1].legend()
+
+    fig.savefig(saved_model_path+'history.png')
+    fig.show()
+
+    return model.state_dict(), (train_loss_ls, val_loss_ls,val_acc_ls,train_acc_ls)

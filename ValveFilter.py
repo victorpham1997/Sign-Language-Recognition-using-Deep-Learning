@@ -6,8 +6,8 @@ from torch.nn import functional as F
 
 import argparse
 import os
-from ModelClasses import *
-from utils.
+from utils.train import *
+# from architecture.Baseline import Baseline, Transformer, ValveFilterModel
 import cv2
 import pandas as pd
 
@@ -23,15 +23,18 @@ def is_valid_file(parser, filepath, fileType):
 		raise parser.error("{} filepath: {} does not exist!".format(fileType, filepath))
 
 parser = argparse.ArgumentParser(description='Valve Filter Model')
-parser.add_argument('--model', type=lambda x: is_valid_file(parser, x, "Model"), required=True, help="Pass in the model path")
+parser.add_argument('--model_name', type=str, required=True, help="Pass in the model type")
+parser.add_argument('--model_weight', type=lambda x: is_valid_file(parser, x, "Model"), required=True, help="Pass in the model weight path")
 parser.add_argument('--video', type=lambda x: is_valid_file(parser, x, "Video"), required=True, help="Pass in the video path")
 parser.add_argument('--labels', type=lambda x: is_valid_file(parser, x, "Labels"), required=True, help="Pass in the ground truth labels")
 
 
 args = parser.parse_args()
-modelPath = args.model
+modelName = args.model_name
+modelPath = args.model_weight
 videoPath = args.video
 labelsPath = args.labels
+
 
 def displayPredVideo(videoPath, prediction):
 	print ("Press 'q' to quit!")
@@ -58,47 +61,58 @@ def displayPredVideo(videoPath, prediction):
 
 
 def GetLabel(labelFilename, videoName):
-	searchFor = "_".join(videoName.split("\\")[-1].split("_")[:2])
+	searchFor = "_".join(videoName.split("/")[-1].split("_")[:2])
 	labels = pd.read_csv(labelFilename,names = ["file_name", "label"])
 	return torch.tensor([labels[labels.file_name == searchFor]["label"].values[0]])
 
 
-def GetVideoArray(videoFilePath):
+def GetVideoArray(videoFilePath,device):
 	cap = cv2.VideoCapture(videoFilePath)   # capturing the video from the given path
 	video_arr = []
-	device = "cuda"
+	device = device
 	while(cap.isOpened()):
 		frameId = cap.get(1) #current frame number
 		ret, frame = cap.read()
 		if (ret != True):
 			break
-		if (frameId % 4 == 0):
+		if (frameId % 2 == 0):
 			# Converting to tensor
 			frame =  torchvision.transforms.functional.to_tensor(frame).float().to(device)
 			frame = frame.unsqueeze(0)
-			frame =  F.interpolate(frame, (128,128), mode='bilinear')
+			frame =  F.interpolate(frame, (256,256), mode='bilinear')
 			frame = frame.squeeze(0)
 			video_arr.append(frame)
 	cap.release()
 
+	return torch.unsqueeze(torch.stack(video_arr), 0) 
 
-	if len(video_arr)<int(156/2):
-		empty_frame = torch.zeros((3,128,128)).to(device)
-		padding  = [empty_frame]*(int(156/2)-len(video_arr))
-		video_arr+=padding
 
-	return video_arr, torch.unsqueeze(torch.stack(video_arr), 0) 
-
-	
 # load in video & roi data
-videoArrayRaw, videoArray = GetVideoArray(videoPath)
-videoROIArrayRaw, videoROIArray = GetVideoArray(videoPath.replace("color", "roi"))
-
-# load in the gt labels
+device = "cuda"
+videoArray = GetVideoArray(videoPath, device)
 label = GetLabel(labelsPath, videoPath)
 
+
+if modelName == "valveFilter":
+	videoROIArray = GetVideoArray(videoPath.replace("color", "roi"),device)
+	data = [videoArray, videoROIArray, label]
+	from architecture.ValveFilterModel import *
+	print("Asdfadsf")
+elif modelName == "baseline":
+	data = [videoArray, label]
+	from architecture.BaselineModel import *
+elif modelName == "transfromer":
+	data = [videoArray, label]
+	from architecture.TransformerModel import *
+
+
 model = torch.load(modelPath)
+model = model.to(device)
 print (model)
-criterion = nn.NLLLoss()
-predictions, test_loss, accuracy = validation_vf_single(model, [videoArray, videoROIArray, label], criterion, "cuda")
+
+
+
+
+predictions = inference(modelName, model, data, device)
+
 displayPredVideo(videoPath, predictions)
